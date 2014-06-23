@@ -6,7 +6,7 @@ To fetch the PNR status from Indian railway using PHP and cURL
 API to fetch the PNR status
 
 ##USAGE
-=======
+
 The API support Both POST and GET Parameter.
 
 example to get the data in XML format is 
@@ -24,7 +24,7 @@ The result format supported are XML,JSON and JSONP
 JSON is the default return type. If callback is provided in the GET parameter then JSONP is returned 
 
 ##RESULT XML
-===========
+
 Example 
 ```
 <?xml version="1.0"?>
@@ -51,7 +51,7 @@ Example
 </result> 
 ```
 ##RESULT JSON
-==============
+
 Example
 ```
 {"status":"OK",
@@ -75,7 +75,7 @@ Example
 }
 ```
 ##More Details
-=================
+
 Latest Blog post can be found [here](http://revealdtech.blogspot.com/2014/06/using-php-curl-get-pnr-status-of-indian.html "Data with captcha").
 
 Initial Reading from [here](http://revealdtech.blogspot.in/2013/07/using-php-curl-get-contents-of-site.html "Basic").
