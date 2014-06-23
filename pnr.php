@@ -62,7 +62,7 @@ function array2xml($student_info, &$xml_student_info) {
 }
 
 //Function to Retrieve the data
-function makeWebCall($urlto,$cfile,$postData = null,$refer=null){
+function makeWebCall($urlto,$postData = null,$refer=null){
 
 //create cURL connection
 $curl_connection = curl_init($urlto);
@@ -70,7 +70,6 @@ $curl_connection = curl_init($urlto);
 curl_setopt($curl_connection, CURLOPT_CONNECTTIMEOUT, 30);
 curl_setopt($curl_connection, CURLOPT_USERAGENT,
   "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)");
-curl_setopt($curl_connection, CURLOPT_HTTPHEADER, array('Host: www.indianrail.gov.in'));
 curl_setopt($curl_connection, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($curl_connection, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($curl_connection, CURLOPT_FOLLOWLOCATION, true);
@@ -80,24 +79,12 @@ if(isset($postData)){
     curl_setopt($curl_connection, CURLOPT_POST,true);	
 	curl_setopt($curl_connection, CURLOPT_POSTFIELDS, $postData);
 }
-curl_setopt( $curl_connection, CURLOPT_COOKIEJAR,  $cfile );
-curl_setopt( $curl_connection, CURLOPT_COOKIEFILE, $cfile );
-curl_setopt( $curl_connection, CURLOPT_COOKIESESSION,true); 
-curl_setopt($curl_connection, CURLOPT_AUTOREFERER, true);
+
 
 if(isset($refer)){
  //set referer
  curl_setopt($curl_connection, CURLOPT_REFERER, $refer);
 }
-$header[0] = "Accept: text/xml,application/xml,application/xhtml+xml,";
-$header[0] .= "text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5";
-$header[] = "Cache-Control: max-age=0";
-$header[] = "Connection: keep-alive";
-$header[] = "Keep-Alive: 300";
-$header[] = "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7";
-$header[] = "Accept-Language: en-us,en;q=0.5";
-$header[] = "Pragma: "; //browsers keep this blank.
-curl_setopt($curl_connection, CURLOPT_HTTPHEADER, $header);
 //perform our request
 $result = curl_exec($curl_connection);
 // Debug -Data
@@ -131,39 +118,18 @@ return implode ('&', $post_items);
 // callback String 			   false          Support for JSONP only supported for GET
 $pnt_no = isset($_POST['pnrno'])? $_POST['pnrno']:(isset($_GET['pnrno'])?$_GET['pnrno']:'');
 $rtype = isset($_POST['rtype'])? $_POST['rtype']:(isset($_GET['rtype'])?$_GET['rtype']:'');
-// Needed for setting cookie
-$ckfile = tempnam ("/tmp", "CURLCOOKIE");
+
 $url_captch = 'http://www.indianrail.gov.in/pnr_Enq.html';
 $url_pnr = 'http://www.indianrail.gov.in/cgi_bin/inet_pnstat_cgi_10521.cgi';
-// To get PNR there are 2 steps. 
-// 1. Get the captcha by going to http://www.indianrail.gov.in/pnr_Enq.html
-// 2. submit the information to http://www.indianrail.gov.in/cgi_bin/inet_pnrstat_cgi_10521.cgi
-
-//STEP 1
-// Get the captcha
-$retult_captcha = makeWebCall($url_captch ,$ckfile);
-//Debug
-//var_dump($retult_captcha);
-$matchescaptcha = array();
-//captcha is found by the below 
-//<input name=\"lccp_cap_val\" value\=\"([0-9].*)\" id.*>//;
-preg_match_all('/<input name=\"lccp_cap_val\" value\=\"([0-9].*)\" id.*>/',$retult_captcha,$matchescaptcha);
-// Debug
-//var_dump($matchescaptcha);
-$captchaVal = "";
-if (count($matchescaptcha)>1) {
-$captchaVal = $matchescaptcha[1][0]; // The first element has the captch info
-}
-//STEP 2
 // Submit the captcha and PNR
 //create array of data to be posted
 $post_data['lccp_pnrno1'] = $pnt_no;
-$post_data['lccp_cap_val'] = $captchaVal;
-$post_data['lccp_capinp_val'] = $captchaVal;
+$post_data['lccp_cap_val'] = 12345; //dummy captcha
+$post_data['lccp_capinp_val'] = 12345;
 $post_data['submit'] = "Get Status";
 $post_string = createPostString($post_data);
 
-$result = makeWebCall($url_pnr,$ckfile,$post_string,$url_captch);
+$result = makeWebCall($url_pnr,$post_string,$url_captch );
 
 //Debug
 //var_dump($result);
