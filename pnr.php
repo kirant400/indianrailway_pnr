@@ -1,5 +1,6 @@
 <?php
-    header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Origin: *'); //This allow to consume from any where
+// To get the JSON string from array	
 function array2json($arr) {
     if(function_exists('json_encode')) return json_encode($arr); //Lastest versions of PHP already has this functionality.
     $parts = array();
@@ -41,7 +42,8 @@ function array2json($arr) {
     if($is_list) return '[' . $json . ']';//Return numerical JSON
     return '{' . $json . '}';//Return associative JSON
 } 
-// function defination to convert array to xml
+
+// function definition to convert array to xml
 function array2xml($student_info, &$xml_student_info) {
     foreach($student_info as $key => $value) {
         if(is_array($value)) {
@@ -59,39 +61,118 @@ function array2xml($student_info, &$xml_student_info) {
     }
 }
 
-$pnt_no = isset($_POST['pnrno'])? $_POST['pnrno']:(isset($_GET['pnrno'])?$_GET['pnrno']:'');
-$rtype = isset($_POST['rtype'])? $_POST['rtype']:(isset($_GET['rtype'])?$_GET['rtype']:'');
-//create array of data to be posted
-$post_data['lccp_pnrno1'] = $pnt_no;
-$post_data['submit'] = "Wait For PNR Enquiry!";
-//traverse array and prepare data for posting (key1=value1)
-foreach ( $post_data as $key => $value) {
-    $post_items[] = $key . '=' . $value;
-}
-//create the final string to be posted using implode()
-$post_string = implode ('&', $post_items);
+//Function to Retrieve the data
+function makeWebCall($urlto,$cfile,$postData = null,$refer=null){
+
 //create cURL connection
-$curl_connection =
-  curl_init('http://www.indianrail.gov.in/cgi_bin/inet_pnrstat_cgi.cgi');
+$curl_connection = curl_init($urlto);
 //set options
 curl_setopt($curl_connection, CURLOPT_CONNECTTIMEOUT, 30);
 curl_setopt($curl_connection, CURLOPT_USERAGENT,
   "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)");
+curl_setopt($curl_connection, CURLOPT_HTTPHEADER, array('Host: www.indianrail.gov.in'));
 curl_setopt($curl_connection, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($curl_connection, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($curl_connection, CURLOPT_FOLLOWLOCATION, 1);
-//set data to be posted
-curl_setopt($curl_connection, CURLOPT_POSTFIELDS, $post_string);
+curl_setopt($curl_connection, CURLOPT_FOLLOWLOCATION, true);
+//if 
+if(isset($postData)){
+    //set data to be posted
+    curl_setopt($curl_connection, CURLOPT_POST,true);	
+	curl_setopt($curl_connection, CURLOPT_POSTFIELDS, $postData);
+}
+curl_setopt( $curl_connection, CURLOPT_COOKIEJAR,  $cfile );
+curl_setopt( $curl_connection, CURLOPT_COOKIEFILE, $cfile );
+curl_setopt( $curl_connection, CURLOPT_COOKIESESSION,true); 
+curl_setopt($curl_connection, CURLOPT_AUTOREFERER, true);
+
+if(isset($refer)){
+ //set referer
+ curl_setopt($curl_connection, CURLOPT_REFERER, $refer);
+}
+$header[0] = "Accept: text/xml,application/xml,application/xhtml+xml,";
+$header[0] .= "text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5";
+$header[] = "Cache-Control: max-age=0";
+$header[] = "Connection: keep-alive";
+$header[] = "Keep-Alive: 300";
+$header[] = "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7";
+$header[] = "Accept-Language: en-us,en;q=0.5";
+$header[] = "Pragma: "; //browsers keep this blank.
+curl_setopt($curl_connection, CURLOPT_HTTPHEADER, $header);
 //perform our request
 $result = curl_exec($curl_connection);
+// Debug -Data
 //show information regarding the request
-//print_r(curl_getinfo($curl_connection));
-//echo curl_errno($curl_connection) . '-' .
+//var_dump(curl_getinfo($curl_connection));
+// echo curl_errno($curl_connection) . '-' .
 //                curl_error($curl_connection);
+
 //close the connection
 curl_close($curl_connection);
+return $result;
+}
+
+// Function to construct the post request
+function createPostString($postArray){
+//traverse array and prepare data for posting (key1=value1)
+foreach ( $postArray as $key => $value) {
+    $post_items[] = $key . '=' . $value;
+}
+//create the final string to be posted using implode()
+return implode ('&', $post_items);
+}
+
+// This support bot hPOST and get methods
+// Initial check is for post if not found then get request is used.
+// the allowed fields are 
+// KEY      Datatype           Mandatory      Description
+//-------------------------------------------------------
+// pnrno    Integer(10)        true           PNR number to be fetched 10 digit
+// rtype    String(XML/JSON)   false          Return type format 
+// callback String 			   false          Support for JSONP only supported for GET
+$pnt_no = isset($_POST['pnrno'])? $_POST['pnrno']:(isset($_GET['pnrno'])?$_GET['pnrno']:'');
+$rtype = isset($_POST['rtype'])? $_POST['rtype']:(isset($_GET['rtype'])?$_GET['rtype']:'');
+// Needed for setting cookie
+$ckfile = tempnam ("/tmp", "CURLCOOKIE");
+$url_captch = 'http://www.indianrail.gov.in/pnr_Enq.html';
+$url_pnr = 'http://www.indianrail.gov.in/cgi_bin/inet_pnstat_cgi_10521.cgi';
+// To get PNR there are 2 steps. 
+// 1. Get the captcha by going to http://www.indianrail.gov.in/pnr_Enq.html
+// 2. submit the information to http://www.indianrail.gov.in/cgi_bin/inet_pnrstat_cgi_10521.cgi
+
+//STEP 1
+// Get the captcha
+$retult_captcha = makeWebCall($url_captch ,$ckfile);
+//Debug
+//var_dump($retult_captcha);
+$matchescaptcha = array();
+//captcha is found by the below 
+//<input name=\"lccp_cap_val\" value\=\"([0-9].*)\" id.*>//;
+preg_match_all('/<input name=\"lccp_cap_val\" value\=\"([0-9].*)\" id.*>/',$retult_captcha,$matchescaptcha);
+// Debug
+//var_dump($matchescaptcha);
+$captchaVal = "";
+if (count($matchescaptcha)>1) {
+$captchaVal = $matchescaptcha[1][0]; // The first element has the captch info
+}
+//STEP 2
+// Submit the captcha and PNR
+//create array of data to be posted
+$post_data['lccp_pnrno1'] = $pnt_no;
+$post_data['lccp_cap_val'] = $captchaVal;
+$post_data['lccp_capinp_val'] = $captchaVal;
+$post_data['submit'] = "Get Status";
+$post_string = createPostString($post_data);
+
+$result = makeWebCall($url_pnr,$ckfile,$post_string,$url_captch);
+
+//Debug
+//var_dump($result);
+// Parse Logic
+// I have not used DOM lib it is simple regEx parse.
+//Change here when the Page layout of the page changes.
 $matches = array();
-preg_match_all('/<TD class="table_border_both">(.*)<\/TD>/',$result,$matches);
+preg_match_all('/<td class="table_border_both">(.*)<\/td>/i',$result,$matches);
+//DEBUG
 //var_dump($matches);
 $resultVal = array(
     'status'    =>    "INVALID",
@@ -151,7 +232,23 @@ $xmlresult = new SimpleXMLElement("<?xml version=\"1.0\"?><result></result>");
 array2xml($resultVal,$xmlresult);
 echo $xmlresult->asXML();
 }
-else
-echo array2json($resultVal);
+else{
+$jsondata =  array2json($resultVal);
+ if(array_key_exists('callback', $_GET)){
+
+    header('Content-Type: text/javascript; charset=utf8');
+    header('Access-Control-Max-Age: 3628800');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
+
+    $callback = $_GET['callback'];
+    echo $callback.'('.$jsondata.');';
+
+}else{
+    // normal JSON string
+    header('Content-Type: application/json; charset=utf8');
+
+    echo $jsondata;
+}
+}
 
 ?>
