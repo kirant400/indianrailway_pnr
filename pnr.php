@@ -218,3 +218,6 @@ $jsondata =  array2json($resultVal);
 }
 
 ?>
+
+
+You can find a working example <a href="http://railwaypnrstatus.info">here</a>
