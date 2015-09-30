@@ -11,7 +11,7 @@ The API support Both POST and GET Parameter.
 
 example to get the data in XML format is 
 
-http://www.kirant400.com/irctc/pnr.php?pnrno=4565206151&rtype=XML
+~~http://www.kirant400.com/irctc/pnr.php?pnrno=4565206151&rtype=XML~~
 
 | KEY     | Datatype          | Mandatory     | Description
 |---------|-------------------|---------------|------------
